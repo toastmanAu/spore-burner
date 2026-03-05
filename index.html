@@ -180,9 +180,9 @@
 </div>
 
 <script type="module">
-import * as ccc from 'https://esm.sh/@ckb-ccc/core@1.9.0';
-import { meltSpore } from 'https://esm.sh/@ckb-ccc/spore@1.9.0';
-import { cccA } from 'https://esm.sh/@ckb-ccc/connector@1.9.0';
+import * as ccc from 'https://esm.sh/@ckb-ccc/core@1.12.5';
+import { meltSpore } from 'https://esm.sh/@ckb-ccc/spore@1.5.17';
+import { CkbSigner } from 'https://esm.sh/@ckb-ccc/joy-id@1.0.32';
 
 // ── Spore type script code hashes (mainnet + testnet v2)
 const SPORE_CODE_HASH = {
@@ -225,16 +225,11 @@ window.connectWallet = async function() {
       ? new ccc.ClientPublicMainnet()
       : new ccc.ClientPublicTestnet();
 
-    const connector = new cccA.CccConnector({
-      signerFilter: async (s) => s.name === 'JoyID Passkey',
-    });
-    connector.setClient(client);
-    await connector.open();
-
-    signer = await new Promise((res, rej) => {
-      const t = setTimeout(() => rej(new Error('Connection timed out')), 90000);
-      connector.addEventListener('signerChanged', (e) => { clearTimeout(t); res(e.detail.signer); });
-    });
+    // CkbSigner from @ckb-ccc/joy-id — direct JoyID passkey connect, no connector popup
+    const appUri = network === 'mainnet' ? 'https://app.joy.id' : 'https://testnet.joyid.dev';
+    const joyId = new CkbSigner(client, 'Spore Burner', 'https://toastmanau.github.io/spore-burner/favicon.png', appUri);
+    await joyId.connect();
+    signer = joyId;
 
     const addrs = await signer.getAddresses();
     const addr = addrs[0];
@@ -269,18 +264,25 @@ window.loadDobs = async function() {
     const cells = [];
 
     for (const { script: lock } of lockObjs) {
-      const collector = client.findCells({
-        lock,
-        type: { codeHash, hashType: 'data1', args: '0x' },
-      }, 'asc');
-      for await (const cell of collector) {
-        cells.push({
-          id: cell.cellOutput.type.args,
-          capacity: BigInt(cell.cellOutput.capacity),
-          ckb: Number(BigInt(cell.cellOutput.capacity)) / 1e8,
-          data: cell.outputData,
-          cell,
-        });
+      // Search by lock script, filter to only Spore type cells
+      const searchKey = {
+        script: lock,
+        scriptType: 'lock',
+        scriptSearchMode: 'exact',
+        filter: {
+          script: ccc.Script.from({ codeHash, hashType: 'data1', args: '0x' }),
+        },
+        withData: true,
+      };
+      for await (const cell of client.findCells(searchKey, 'asc', 20)) {
+        if (cell.cellOutput.type?.codeHash === codeHash) {
+          cells.push({
+            id: cell.cellOutput.type.args,
+            capacity: BigInt(cell.cellOutput.capacity),
+            ckb: Number(BigInt(cell.cellOutput.capacity)) / 1e8,
+            data: cell.outputData,
+          });
+        }
         if (cells.length >= 100) break;
       }
     }
