@@ -63,6 +63,8 @@
     .dob-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; cursor: pointer; transition: border-color .12s, box-shadow .12s; user-select: none; }
     .dob-card:hover { border-color: rgba(255,69,96,.3); }
     .dob-card.sel { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(255,69,96,.15); }
+    .dob-card.pending { opacity: .35; pointer-events: none; border-color: var(--muted); }
+    .dob-card.pending .card-check::after { content: '⏳'; font-size: .7rem; }
     .card-thumb { width: 100%; aspect-ratio: 1; background: var(--surface2); display: flex; align-items: center; justify-content: center; font-size: 2.6rem; position: relative; }
     .card-check { position: absolute; top: .45rem; right: .45rem; width: 20px; height: 20px; border-radius: 50%; border: 2px solid rgba(255,255,255,.25); background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; font-size: .7rem; }
     .dob-card.sel .card-check { background: var(--accent); border-color: var(--accent); }
@@ -412,6 +414,31 @@ window.openConfirm = function() {
 window.closeConfirm = () => document.getElementById('overlay').classList.remove('open');
 
 // ── Execute burn ───────────────────────────────────────────────────────────────
+// Poll until tx confirmed then remove card
+async function waitAndRemove(id, txHash, explorerBase, done, total) {
+  const client = network === 'mainnet' ? new ccc.ClientPublicMainnet() : new ccc.ClientPublicTestnet();
+  for (let i = 0; i < 30; i++) {
+    await new Promise(r => setTimeout(r, 3000));
+    try {
+      const tx = await client.getTransaction(txHash);
+      if (tx?.status === 'committed') {
+        document.getElementById('card-' + CSS.escape(id))?.remove();
+        cells = cells.filter(x => x.id !== id);
+        const sc = cells.filter(c => c.cellType === 'spore').length;
+        const kc = cells.filter(c => c.cellType === 'ckbfs').length;
+        document.getElementById('tab-all').textContent   = cells.length;
+        document.getElementById('tab-spore').textContent = sc;
+        document.getElementById('tab-ckbfs').textContent = kc;
+        document.getElementById('status-bar').innerHTML = `✅ Burned! <a href="${explorerBase}/transaction/${txHash}" target="_blank" style="color:inherit">${txHash.slice(0,14)}…</a> confirmed`;
+        document.getElementById('status-bar').className = 'success';
+        return;
+      }
+    } catch {}
+  }
+  // Timeout — reload to get fresh state
+  document.getElementById('card-' + CSS.escape(id))?.remove();
+}
+
 window.executeBurn = async function() {
   const btn = document.getElementById('btn-burn');
   btn.disabled = true;
@@ -442,20 +469,17 @@ window.executeBurn = async function() {
         tx = await signer.prepareTransaction(tx); // fills JoyID witness placeholder
         txHash = await signer.sendTransaction(tx);
       }
-      document.getElementById('card-' + CSS.escape(id))?.remove();
-      cells = cells.filter(x => x.id !== id);
+      // Mark as pending in UI — don't remove until confirmed on-chain
+      const card = document.getElementById('card-' + CSS.escape(id));
+      if (card) { card.classList.add('pending'); card.classList.remove('sel'); }
       selected.delete(id);
       done++;
-      // Update tab counts
-      const sc = cells.filter(c => c.cellType === 'spore').length;
-      const kc = cells.filter(c => c.cellType === 'ckbfs').length;
-      document.getElementById('tab-all').textContent   = cells.length;
-      document.getElementById('tab-spore').textContent = sc;
-      document.getElementById('tab-ckbfs').textContent = kc;
       updateBulkBar();
       const explorerBase = network === 'mainnet' ? 'https://explorer.nervos.org' : 'https://testnet.explorer.nervos.org';
-      document.getElementById('status-bar').innerHTML = `✓ ${done}/${ids.length} burned → <a href="${explorerBase}/transaction/${txHash}" target="_blank" style="color:inherit">${txHash.slice(0,14)}…</a>`;
-      document.getElementById('status-bar').className = 'success';
+      document.getElementById('status-bar').innerHTML = `⏳ ${done}/${ids.length} submitted → <a href="${explorerBase}/transaction/${txHash}" target="_blank" style="color:var(--blue)">${txHash.slice(0,14)}…</a> (confirming…)`;
+      document.getElementById('status-bar').className = 'info';
+      // Wait for confirmation then remove from UI
+      waitAndRemove(id, txHash, explorerBase, done, ids.length);
     } catch(e) {
       const msg = e?.message || String(e);
       setStatus(`❌ Error on cell ${done + 1}: ${msg}`, 'error');
