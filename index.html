@@ -458,8 +458,9 @@ window.executeBurn = async function() {
       let txHash;
       if (d.cellType === 'spore') {
         // Spore uses meltSpore
-        console.log('[burn] meltSpore id:', d.sporeId, 'signer client:', signer?.client?.constructor?.name);
+        console.log('[burn] meltSpore id:', d.sporeId);
         const { tx } = await meltSpore({ signer, id: d.sporeId });
+        await tx.completeFeeBy(signer, 1000n); // 1000 shannons/KB
         txHash = await signer.sendTransaction(tx);
       } else {
         // CKBFS — consume the cell, return capacity to self (no type output)
