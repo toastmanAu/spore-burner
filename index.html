@@ -164,7 +164,7 @@
 
 <script type="module">
 import * as ccc from 'https://esm.sh/@ckb-ccc/core@1.12.5';
-import { meltSpore } from 'https://esm.sh/@ckb-ccc/spore@1.5.17';
+import { meltSpore, unpackToRawSporeData } from 'https://esm.sh/@ckb-ccc/spore@1.5.17';
 import { JoyId } from 'https://esm.sh/@ckb-ccc/joy-id@1.0.32';
 const CkbSigner = JoyId.CkbSigner;
 
@@ -270,6 +270,22 @@ window.loadCells = async function() {
             for await (const cell of client.findCells(key, 'asc', 100)) {
               if (cell.cellOutput.type?.codeHash === scriptInfo.codeHash) {
                 const uid = cell.outPoint.txHash + ':' + cell.outPoint.index;
+                let contentType = 'unknown';
+                let imageUrl = null;
+                if (cell.outputData && cell.outputData !== '0x') {
+                  if (cellType === 'spore') {
+                    try {
+                      const sporeData = unpackToRawSporeData(cell.outputData);
+                      contentType = sporeData.contentType || 'unknown';
+                      if (contentType.startsWith('image/') && sporeData.content?.length > 0) {
+                        const blob = new Blob([new Uint8Array(sporeData.content)], { type: contentType });
+                        imageUrl = URL.createObjectURL(blob);
+                      }
+                    } catch { contentType = tryParseContentType(cell.outputData); }
+                  } else {
+                    contentType = tryParseContentType(cell.outputData);
+                  }
+                }
                 found.push({
                   id: uid,
                   sporeId: cell.cellOutput.type.args,
@@ -279,7 +295,8 @@ window.loadCells = async function() {
                   cellType,
                   label: scriptInfo.label,
                   codeHash: scriptInfo.codeHash,
-                  contentType: tryParseContentType(cell.outputData),
+                  contentType,
+                  imageUrl,
                   cell,
                 });
               }
@@ -337,7 +354,7 @@ function renderCells(list) {
     return `
     <div class="dob-card ${sel ? 'sel' : ''}" id="card-${CSS.escape(d.id)}" onclick="toggle('${d.id.replace(/'/g,"\\'")}')">
       <div class="card-thumb">
-        ${icon}
+        ${d.imageUrl ? `<img src="${d.imageUrl}" alt="DOB" style="width:100%;height:100%;object-fit:cover;"/>` : icon}
         <div class="card-check">${sel ? '✓' : ''}</div>
         <div class="card-label ${lbl}">${d.label}</div>
       </div>
