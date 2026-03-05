@@ -263,6 +263,7 @@ window.loadCells = async function() {
               scriptSearchMode: 'exact',
               filter: {
                 script: { codeHash: scriptInfo.codeHash, hashType: scriptInfo.hashType, args: '0x' },
+                scriptSearchMode: 'prefix',
               },
               withData: true,
             };
