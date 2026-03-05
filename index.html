@@ -181,14 +181,9 @@
 
 <script type="module">
 import * as ccc from 'https://esm.sh/@ckb-ccc/core@1.12.5';
-import { meltSpore } from 'https://esm.sh/@ckb-ccc/spore@1.5.17';
-import { CkbSigner } from 'https://esm.sh/@ckb-ccc/joy-id@1.0.32';
-
-// ── Spore type script code hashes (mainnet + testnet v2)
-const SPORE_CODE_HASH = {
-  mainnet: '0x4a4dce1df3dffff7f8b2cd7dff7303df3b6150c9ac9e528c8d8e8ec7a1585c26',
-  testnet: '0x685a60219309029d01310311dba953d67029170ca4848a4ff638e57002130a0d',
-};
+import { meltSpore, findSporesBySigner } from 'https://esm.sh/@ckb-ccc/spore@1.5.17';
+import { JoyId } from 'https://esm.sh/@ckb-ccc/joy-id@1.0.32';
+const CkbSigner = JoyId.CkbSigner;
 
 // ── State
 let network = 'testnet';
@@ -255,36 +250,14 @@ window.loadDobs = async function() {
   setStatus('Scanning for Spore cells…', 'info');
 
   try {
-    const client = network === 'mainnet'
-      ? new ccc.ClientPublicMainnet()
-      : new ccc.ClientPublicTestnet();
-
-    const lockObjs = await signer.getAddressObjs();
-    const codeHash = SPORE_CODE_HASH[network];
     const cells = [];
-
-    for (const { script: lock } of lockObjs) {
-      // Search by lock script, filter to only Spore type cells
-      const searchKey = {
-        script: lock,
-        scriptType: 'lock',
-        scriptSearchMode: 'exact',
-        filter: {
-          script: ccc.Script.from({ codeHash, hashType: 'data1', args: '0x' }),
-        },
-        withData: true,
-      };
-      for await (const cell of client.findCells(searchKey, 'asc', 20)) {
-        if (cell.cellOutput.type?.codeHash === codeHash) {
-          cells.push({
-            id: cell.cellOutput.type.args,
-            capacity: BigInt(cell.cellOutput.capacity),
-            ckb: Number(BigInt(cell.cellOutput.capacity)) / 1e8,
-            data: cell.outputData,
-          });
-        }
-        if (cells.length >= 100) break;
-      }
+    for await (const { cell, sporeData } of findSporesBySigner({ signer, limit: 100 })) {
+      cells.push({
+        id: cell.cellOutput.type.args,
+        capacity: BigInt(cell.cellOutput.capacity),
+        ckb: Number(BigInt(cell.cellOutput.capacity)) / 1e8,
+        contentType: sporeData.contentType || 'unknown',
+      });
     }
 
     dobs = cells;
@@ -320,7 +293,7 @@ function renderDobs(list) {
       <div class="card-body">
         <div class="card-id" title="${d.id}">${shortId}</div>
         <div class="card-ckb">${d.ckb.toFixed(2)} CKB</div>
-        <div class="card-type">Spore DOB</div>
+        <div class="card-type">${d.contentType || 'Spore DOB'}</div>
       </div>
     </div>`;
   }).join('');
