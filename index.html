@@ -285,9 +285,25 @@ window.loadCells = async function() {
                     try {
                       const parsed = decodeSporeData(cell.outputData);
                       contentType = parsed.contentType || 'unknown';
-                      if (contentType.startsWith('image/') && parsed.content?.length > 0) {
-                        const blob = new Blob([parsed.content], { type: contentType });
+                      // Strip DOB render params suffix e.g. "image/png;dob..."
+                      const mimeBase = contentType.split(';')[0].trim();
+                      if (mimeBase.startsWith('image/') && parsed.content?.length > 0) {
+                        // Inline image bytes
+                        const blob = new Blob([parsed.content], { type: mimeBase });
                         imageUrl = URL.createObjectURL(blob);
+                      } else if ((mimeBase === 'application/json' || mimeBase === 'text/plain') && parsed.content?.length > 0) {
+                        // Try to extract image URL from JSON content {"url":"...","bg":"..."}
+                        try {
+                          const text = new TextDecoder().decode(parsed.content);
+                          const json = JSON.parse(text);
+                          const url = json.url || json.image || json.img || json.uri;
+                          if (url && /^https?:\/\//.test(url)) imageUrl = url;
+                        } catch {}
+                      } else if (mimeBase === 'text/uri-list' && parsed.content?.length > 0) {
+                        // URI-list type — content is a URL string
+                        const url = new TextDecoder().decode(parsed.content).trim().split('
+')[0];
+                        if (url && /^https?:\/\//.test(url)) imageUrl = url;
                       }
                     } catch { contentType = tryParseContentType(cell.outputData); }
                   } else {
@@ -362,7 +378,7 @@ function renderCells(list) {
     return `
     <div class="dob-card ${sel ? 'sel' : ''}" id="card-${CSS.escape(d.id)}" onclick="toggle('${d.id.replace(/'/g,"\\'")}')">
       <div class="card-thumb">
-        ${d.imageUrl ? `<img src="${d.imageUrl}" alt="DOB" style="width:100%;height:100%;object-fit:cover;"/>` : icon}
+        ${d.imageUrl ? `<img src="${d.imageUrl}" alt="DOB" style="width:100%;height:100%;object-fit:cover;border-radius:4px 4px 0 0;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/><span style="display:none;width:100%;height:100%;align-items:center;justify-content:center;font-size:2rem">${icon}</span>` : icon}
         <div class="card-check">${sel ? '✓' : ''}</div>
         <div class="card-label ${lbl}">${d.label}</div>
       </div>
