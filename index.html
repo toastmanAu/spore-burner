@@ -164,7 +164,7 @@
 
 <script type="module">
 import * as ccc from 'https://esm.sh/@ckb-ccc/core@1.12.5';
-import { meltSpore, unpackToRawSporeData } from 'https://esm.sh/@ckb-ccc/spore@1.5.17';
+import { meltSpore } from 'https://esm.sh/@ckb-ccc/spore@1.5.17';
 import { JoyId } from 'https://esm.sh/@ckb-ccc/joy-id@1.0.32';
 const CkbSigner = JoyId.CkbSigner;
 
@@ -275,10 +275,10 @@ window.loadCells = async function() {
                 if (cell.outputData && cell.outputData !== '0x') {
                   if (cellType === 'spore') {
                     try {
-                      const sporeData = unpackToRawSporeData(cell.outputData);
-                      contentType = sporeData.contentType || 'unknown';
-                      if (contentType.startsWith('image/') && sporeData.content?.length > 0) {
-                        const blob = new Blob([new Uint8Array(sporeData.content)], { type: contentType });
+                      const parsed = decodeSporeData(cell.outputData);
+                      contentType = parsed.contentType || 'unknown';
+                      if (contentType.startsWith('image/') && parsed.content?.length > 0) {
+                        const blob = new Blob([parsed.content], { type: contentType });
                         imageUrl = URL.createObjectURL(blob);
                       }
                     } catch { contentType = tryParseContentType(cell.outputData); }
@@ -462,6 +462,29 @@ window.executeBurn = async function() {
 };
 
 // ── Helpers ─────────────────────────────────────────────────────────────────────
+// Decode Spore molecule-encoded SporeData {contentType: String, content: Bytes, clusterId: BytesOpt}
+// Molecule table: 4-byte total size, 4-byte offsets header, then fields
+function decodeSporeData(hexData) {
+  const hex = hexData.startsWith('0x') ? hexData.slice(2) : hexData;
+  const buf = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < buf.length; i++) buf[i] = parseInt(hex.slice(i*2, i*2+2), 16);
+  const dv = new DataView(buf.buffer);
+  // Table layout: [total_size u32le] [offset0 u32le] [offset1 u32le] ... [field data]
+  const fieldCount = (dv.getUint32(4, true) / 4) - 1; // first offset / 4 - 1
+  const offsets = [];
+  for (let i = 0; i < fieldCount; i++) offsets.push(dv.getUint32(4 + i*4, true));
+  offsets.push(buf.length); // sentinel
+  // Field 0: contentType (UTF-8 string, prefixed with 4-byte length)
+  const ctStart = offsets[0];
+  const ctLen = dv.getUint32(ctStart, true);
+  const contentType = new TextDecoder().decode(buf.slice(ctStart + 4, ctStart + 4 + ctLen));
+  // Field 1: content (bytes, prefixed with 4-byte length)
+  const cStart = offsets[1];
+  const cLen = dv.getUint32(cStart, true);
+  const content = buf.slice(cStart + 4, cStart + 4 + cLen);
+  return { contentType, content };
+}
+
 function tryParseContentType(hexData) {
   if (!hexData || hexData === '0x' || hexData.length < 4) return 'unknown';
   try {
