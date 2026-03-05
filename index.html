@@ -96,6 +96,10 @@
   </style>
 </head>
 <body>
+<script>
+// Prevent any accidental form submissions reloading page
+document.addEventListener('submit', e => e.preventDefault());
+</script>
 
 <header>
   <div>🔥</div>
@@ -449,14 +453,19 @@ window.executeBurn = async function() {
       document.getElementById('tab-spore').textContent = sc;
       document.getElementById('tab-ckbfs').textContent = kc;
       updateBulkBar();
-      setStatus(`✓ ${done}/${ids.length} burned → ${txHash.slice(0,14)}…`, 'success');
+      const explorerBase = network === 'mainnet' ? 'https://explorer.nervos.org' : 'https://testnet.explorer.nervos.org';
+      document.getElementById('status-bar').innerHTML = `✓ ${done}/${ids.length} burned → <a href="${explorerBase}/transaction/${txHash}" target="_blank" style="color:inherit">${txHash.slice(0,14)}…</a>`;
+      document.getElementById('status-bar').className = 'success';
     } catch(e) {
-      setStatus(`Failed on cell ${done + 1}: ${e.message}`, 'error');
-      console.error(e);
-      break;
+      const msg = e?.message || String(e);
+      setStatus(`❌ Error on cell ${done + 1}: ${msg}`, 'error');
+      console.error('[burn error]', e);
+      // Don't break — try next cell
+      continue;
     }
   }
-  if (done === ids.length) setStatus(`🔥 Done! Burned ${done} cell${done !== 1 ? 's' : ''}. CKB returned to wallet.`, 'success');
+  if (done > 0) setStatus(`🔥 Done! Burned ${done}/${ids.length} cell${done !== 1 ? 's' : ''}. CKB returned to wallet.`, 'success');
+  else setStatus('No cells burned. Check console for errors.', 'error');
   btn.textContent = '🔥 Burn Forever';
   btn.disabled = false;
 };
