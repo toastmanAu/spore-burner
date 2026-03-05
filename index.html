@@ -3,105 +3,94 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Spore Burner — Melt DOBs & Reclaim CKB</title>
-  <meta name="description" content="Burn (melt) Spore DOBs on Nervos CKB to reclaim locked CKB capacity. Works on mainnet and testnet."/>
+  <title>Spore & CKBFS Burner — Reclaim CKB</title>
+  <meta name="description" content="Burn Spore DOBs and CKBFS cells on Nervos CKB to reclaim locked CKB. Mainnet and testnet."/>
   <style>
     :root {
       --bg: #07090d; --surface: #0e1117; --surface2: #141820;
       --border: #1a2030; --accent: #ff4560; --green: #00e5a0;
       --yellow: #fbbf24; --blue: #00c8ff; --text: #e2e8f0; --muted: #4a5568;
+      --purple: #a78bfa;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { background: var(--bg); color: var(--text); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 14px; min-height: 100vh; }
 
-    /* ── Header ── */
-    header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 1rem 1.5rem; display: flex; align-items: center; gap: 1rem; }
+    header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 1rem 1.5rem; display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; }
     header h1 { font-size: 1.1rem; font-weight: 700; }
     header h1 span { color: var(--accent); }
-    .badge { font-size: .7rem; padding: .2rem .5rem; border-radius: 4px; font-weight: 700; letter-spacing: .04em; }
+    .badge { font-size: .7rem; padding: .2rem .5rem; border-radius: 4px; font-weight: 700; }
     .badge-testnet { background: rgba(251,191,36,.15); color: var(--yellow); border: 1px solid rgba(251,191,36,.3); }
     .badge-mainnet { background: rgba(0,229,160,.15); color: var(--green); border: 1px solid rgba(0,229,160,.3); }
     .header-right { margin-left: auto; display: flex; align-items: center; gap: .75rem; }
-    .network-toggle { display: flex; gap: .25rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: .2rem; }
+    .network-toggle { display: flex; gap: .2rem; background: var(--surface2); border: 1px solid var(--border); border-radius: 6px; padding: .2rem; }
     .net-btn { padding: .25rem .7rem; border-radius: 4px; border: none; cursor: pointer; font-size: .75rem; font-weight: 600; background: none; color: var(--muted); transition: all .15s; }
-    .net-btn.active { background: var(--surface); color: var(--text); }
-    .net-btn.active.mainnet { color: var(--green); }
-    .net-btn.active.testnet { color: var(--yellow); }
+    .net-btn.active.mainnet { background: var(--surface); color: var(--green); }
+    .net-btn.active.testnet { background: var(--surface); color: var(--yellow); }
 
-    /* ── Main ── */
-    main { max-width: 900px; margin: 0 auto; padding: 1.5rem; }
+    main { max-width: 960px; margin: 0 auto; padding: 1.5rem; }
 
-    .intro { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1.2rem; margin-bottom: 1.5rem; }
-    .intro p { font-size: .85rem; color: var(--muted); line-height: 1.7; }
-    .intro p + p { margin-top: .5rem; }
+    .intro { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.2rem; margin-bottom: 1.25rem; font-size: .83rem; color: var(--muted); line-height: 1.7; }
     .intro strong { color: var(--text); }
+    .warning { background: rgba(255,69,96,.07); border: 1px solid rgba(255,69,96,.25); border-radius: 8px; padding: .7rem 1rem; margin-bottom: 1.1rem; font-size: .81rem; color: #ff8099; }
 
-    .warning { background: rgba(255,69,96,.07); border: 1px solid rgba(255,69,96,.25); border-radius: 8px; padding: .75rem 1rem; margin-bottom: 1.25rem; font-size: .82rem; color: #ff8099; line-height: 1.5; }
-    .warning.mainnet-warn { display: none; }
+    #status-bar { font-size: .82rem; padding: .55rem 1rem; border-radius: 7px; margin-bottom: 1rem; display: none; }
+    #status-bar.info    { background: rgba(0,200,255,.07); color: var(--blue);  border: 1px solid rgba(0,200,255,.2); display: block; }
+    #status-bar.error   { background: rgba(255,69,96,.07); color: #ff4560;      border: 1px solid rgba(255,69,96,.2); display: block; }
+    #status-bar.success { background: rgba(0,229,160,.07); color: var(--green); border: 1px solid rgba(0,229,160,.2); display: block; }
 
-    /* ── Controls ── */
-    .controls { display: flex; gap: .75rem; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; }
-    .btn { padding: .5rem 1.1rem; border-radius: 7px; border: none; cursor: pointer; font-size: .83rem; font-weight: 600; transition: all .15s; }
+    .controls { display: flex; gap: .65rem; align-items: center; margin-bottom: 1rem; flex-wrap: wrap; }
+    .btn { padding: .45rem 1rem; border-radius: 7px; border: none; cursor: pointer; font-size: .82rem; font-weight: 600; transition: all .15s; }
     .btn-primary { background: var(--blue); color: #000; }
     .btn-primary:hover { background: #00aadd; }
     .btn-danger { background: var(--accent); color: #fff; }
     .btn-danger:hover { background: #cc3348; }
     .btn-outline { background: none; border: 1px solid var(--border); color: var(--muted); }
-    .btn-outline:hover { border-color: var(--accent); color: var(--text); }
+    .btn-outline:hover { border-color: #555; color: var(--text); }
     .btn:disabled { opacity: .4; cursor: not-allowed; }
-    .wallet-chip { font-size: .78rem; padding: .35rem .75rem; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; font-family: monospace; color: var(--muted); }
-    .wallet-chip.connected { color: var(--green); border-color: rgba(0,229,160,.35); }
+    .wallet-chip { font-size: .77rem; padding: .32rem .7rem; background: var(--surface); border: 1px solid var(--border); border-radius: 20px; font-family: monospace; color: var(--muted); }
+    .wallet-chip.ok { color: var(--green); border-color: rgba(0,229,160,.3); }
 
-    /* ── Status bar ── */
-    #status-bar { font-size: .82rem; padding: .6rem 1rem; border-radius: 7px; margin-bottom: 1rem; display: none; }
-    #status-bar.info  { background: rgba(0,200,255,.08); color: var(--blue); border: 1px solid rgba(0,200,255,.2); display: block; }
-    #status-bar.error { background: rgba(255,69,96,.08); color: #ff4560; border: 1px solid rgba(255,69,96,.2); display: block; }
-    #status-bar.success { background: rgba(0,229,160,.08); color: var(--green); border: 1px solid rgba(0,229,160,.2); display: block; }
+    .bulk-bar { background: var(--surface); border: 1px solid rgba(255,69,96,.25); border-radius: 8px; padding: .7rem 1rem; margin-bottom: 1rem; display: none; align-items: center; gap: .75rem; flex-wrap: wrap; }
+    .bulk-bar.on { display: flex; }
+    .bulk-ckb { color: var(--green); font-weight: 600; margin-left: auto; }
 
-    /* ── Bulk bar ── */
-    .bulk-bar { background: var(--surface); border: 1px solid rgba(255,69,96,.3); border-radius: 8px; padding: .75rem 1.1rem; margin-bottom: 1rem; display: none; align-items: center; gap: 1rem; font-size: .85rem; }
-    .bulk-bar.visible { display: flex; }
-    .bulk-count { color: var(--muted); }
-    .bulk-count strong { color: var(--accent); }
-    .bulk-ckb { color: var(--green); font-weight: 600; }
-    .bulk-actions { margin-left: auto; display: flex; gap: .5rem; }
+    .type-tabs { display: flex; gap: .4rem; margin-bottom: 1rem; flex-wrap: wrap; }
+    .type-tab { padding: .35rem .85rem; border-radius: 6px; border: 1px solid var(--border); background: none; color: var(--muted); cursor: pointer; font-size: .8rem; font-weight: 600; transition: all .15s; }
+    .type-tab.active { background: var(--surface); color: var(--text); border-color: #333; }
+    .tab-count { background: var(--surface2); border-radius: 10px; padding: .1rem .45rem; font-size: .7rem; margin-left: .3rem; }
 
-    /* ── Grid ── */
-    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; }
-    .dob-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; cursor: pointer; transition: border-color .15s, box-shadow .15s; user-select: none; }
-    .dob-card:hover { border-color: rgba(255,69,96,.35); }
-    .dob-card.selected { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(255,69,96,.18); }
-    .card-thumb { width: 100%; aspect-ratio: 1; background: var(--surface2); display: flex; align-items: center; justify-content: center; font-size: 2.8rem; position: relative; }
-    .card-thumb img { width: 100%; height: 100%; object-fit: cover; }
-    .card-check { position: absolute; top: .5rem; right: .5rem; width: 22px; height: 22px; border-radius: 50%; border: 2px solid rgba(255,255,255,.3); background: rgba(0,0,0,.4); display: flex; align-items: center; justify-content: center; font-size: .75rem; }
-    .dob-card.selected .card-check { background: var(--accent); border-color: var(--accent); }
-    .card-body { padding: .7rem; }
-    .card-id { font-size: .65rem; font-family: monospace; color: var(--muted); margin-bottom: .3rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .card-ckb { font-size: .92rem; font-weight: 700; color: var(--yellow); }
-    .card-type { font-size: .68rem; color: var(--muted); margin-top: .2rem; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: .9rem; }
+    .dob-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; cursor: pointer; transition: border-color .12s, box-shadow .12s; user-select: none; }
+    .dob-card:hover { border-color: rgba(255,69,96,.3); }
+    .dob-card.sel { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(255,69,96,.15); }
+    .card-thumb { width: 100%; aspect-ratio: 1; background: var(--surface2); display: flex; align-items: center; justify-content: center; font-size: 2.6rem; position: relative; }
+    .card-check { position: absolute; top: .45rem; right: .45rem; width: 20px; height: 20px; border-radius: 50%; border: 2px solid rgba(255,255,255,.25); background: rgba(0,0,0,.45); display: flex; align-items: center; justify-content: center; font-size: .7rem; }
+    .dob-card.sel .card-check { background: var(--accent); border-color: var(--accent); }
+    .card-label { position: absolute; bottom: .4rem; left: .4rem; font-size: .62rem; font-weight: 700; padding: .15rem .4rem; border-radius: 4px; }
+    .lbl-spore { background: rgba(0,200,255,.2); color: var(--blue); }
+    .lbl-ckbfs { background: rgba(167,139,250,.2); color: var(--purple); }
+    .card-body { padding: .65rem; }
+    .card-id  { font-size: .63rem; font-family: monospace; color: var(--muted); margin-bottom: .25rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .card-ckb { font-size: .9rem; font-weight: 700; color: var(--yellow); }
+    .card-meta { font-size: .67rem; color: var(--muted); margin-top: .2rem; }
 
-    /* ── Empty / loading ── */
-    .empty { grid-column: 1 / -1; text-align: center; padding: 3.5rem 1rem; color: var(--muted); }
-    .empty .icon { font-size: 3.5rem; margin-bottom: 1rem; }
-    .empty p { font-size: .9rem; }
+    .empty { grid-column: 1 / -1; text-align: center; padding: 3rem 1rem; color: var(--muted); }
+    .empty .icon { font-size: 3rem; margin-bottom: .75rem; }
 
-    /* ── Modal ── */
     .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.75); z-index: 200; display: none; align-items: center; justify-content: center; padding: 1rem; }
     .overlay.open { display: flex; }
     .modal { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem; max-width: 440px; width: 100%; }
-    .modal h2 { font-size: 1.05rem; margin-bottom: .5rem; color: var(--accent); }
-    .modal p { font-size: .84rem; color: var(--muted); line-height: 1.6; margin-bottom: .75rem; }
-    .modal-list { font-size: .75rem; font-family: monospace; background: var(--surface2); padding: .75rem; border-radius: 6px; margin-bottom: 1rem; max-height: 160px; overflow-y: auto; white-space: pre; line-height: 1.6; color: var(--muted); }
-    .modal-total { font-size: .9rem; margin-bottom: 1.25rem; }
+    .modal h2 { font-size: 1rem; margin-bottom: .4rem; color: var(--accent); }
+    .modal p  { font-size: .83rem; color: var(--muted); line-height: 1.6; margin-bottom: .75rem; }
+    .modal-list { font-size: .73rem; font-family: monospace; background: var(--surface2); padding: .7rem; border-radius: 6px; margin-bottom: .9rem; max-height: 160px; overflow-y: auto; white-space: pre; color: var(--muted); line-height: 1.6; }
+    .modal-total { font-size: .88rem; margin-bottom: 1.2rem; }
     .modal-total strong { color: var(--green); }
-    .modal-actions { display: flex; gap: .75rem; justify-content: flex-end; }
+    .modal-actions { display: flex; gap: .65rem; justify-content: flex-end; }
 
-    /* ── Spinner ── */
-    .spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid rgba(255,255,255,.25); border-top-color: currentColor; border-radius: 50%; animation: spin .6s linear infinite; vertical-align: middle; margin-right: .4rem; }
+    .spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid rgba(255,255,255,.2); border-top-color: currentColor; border-radius: 50%; animation: spin .6s linear infinite; vertical-align: middle; margin-right: .35rem; }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ── Footer ── */
-    footer { text-align: center; padding: 2.5rem 1rem 3rem; font-size: .75rem; color: var(--muted); }
+    footer { text-align: center; padding: 2rem 1rem 3rem; font-size: .73rem; color: var(--muted); }
     footer a { color: var(--muted); text-decoration: none; }
     footer a:hover { color: var(--text); }
   </style>
@@ -110,8 +99,8 @@
 
 <header>
   <div>🔥</div>
-  <h1>Spore <span>Burner</span></h1>
-  <div id="network-badge" class="badge badge-testnet">TESTNET</div>
+  <h1>Spore &amp; CKBFS <span>Burner</span></h1>
+  <div id="net-badge" class="badge badge-testnet">TESTNET</div>
   <div class="header-right">
     <div class="network-toggle">
       <button class="net-btn testnet active" onclick="switchNetwork('testnet')">Testnet</button>
@@ -121,55 +110,49 @@
 </header>
 
 <main>
-
   <div class="intro">
-    <p><strong>What is this?</strong> Spore DOBs on Nervos CKB lock CKB capacity inside the cell. This tool lets you <strong>melt (burn)</strong> DOBs you no longer want — permanently destroying the DOB and returning the locked CKB to your wallet.</p>
-    <p>Works with <strong>JoyID</strong>. No Node.js, no CLI, no setup — runs entirely in your browser.</p>
+    <strong>Spore DOBs</strong> and <strong>CKBFS cells</strong> lock CKB capacity inside each cell. This tool lets you burn them — permanently destroying the cell and returning the locked CKB to your wallet. Works with JoyID on mainnet and testnet. No install, no CLI.
   </div>
-
-  <div class="warning" id="testnet-warn">
-    ⚠️ <strong>Testnet mode.</strong> You are burning testnet DOBs only. Testnet CKB has no real value. Switch to Mainnet above to burn real DOBs.
-  </div>
-  <div class="warning mainnet-warn" id="mainnet-warn">
-    🔥 <strong>Mainnet mode.</strong> You are about to permanently destroy real DOBs. This cannot be undone. Make sure you select the right ones.
-  </div>
+  <div class="warning" id="warn-testnet">⚠️ <strong>Testnet mode</strong> — burning testnet cells only. No real value.</div>
+  <div class="warning" id="warn-mainnet" style="display:none">🔥 <strong>Mainnet mode</strong> — permanently destroys real cells. Cannot be undone.</div>
 
   <div id="status-bar"></div>
 
   <div class="controls">
     <button class="btn btn-primary" id="btn-connect" onclick="connectWallet()">Connect JoyID</button>
-    <button class="btn btn-outline" id="btn-load" onclick="loadDobs()" disabled>Load My DOBs</button>
+    <button class="btn btn-outline" id="btn-load" onclick="loadCells()" disabled>Load My Cells</button>
     <div class="wallet-chip" id="wallet-chip">Not connected</div>
   </div>
 
   <div class="bulk-bar" id="bulk-bar">
-    <span class="bulk-count"><strong id="sel-count">0</strong> selected</span>
-    <span class="bulk-ckb" id="sel-ckb">+0 CKB to reclaim</span>
-    <div class="bulk-actions">
-      <button class="btn btn-outline" onclick="selectAll()">Select All</button>
-      <button class="btn btn-outline" onclick="selectNone()">Clear</button>
-      <button class="btn btn-danger" onclick="openConfirm()">🔥 Burn Selected</button>
+    <span><strong id="sel-count">0</strong> selected</span>
+    <div style="display:flex;gap:.4rem">
+      <button class="btn btn-outline" onclick="selectAll()">All</button>
+      <button class="btn btn-outline" onclick="selectNone()">None</button>
     </div>
+    <span class="bulk-ckb" id="sel-ckb">+0 CKB</span>
+    <button class="btn btn-danger" onclick="openConfirm()">🔥 Burn Selected</button>
+  </div>
+
+  <div class="type-tabs" id="type-tabs" style="display:none">
+    <button class="type-tab active" data-tab="all"   onclick="showTab('all')">All <span class="tab-count" id="tab-all">0</span></button>
+    <button class="type-tab"        data-tab="spore" onclick="showTab('spore')">Spore DOBs <span class="tab-count" id="tab-spore">0</span></button>
+    <button class="type-tab"        data-tab="ckbfs" onclick="showTab('ckbfs')">CKBFS <span class="tab-count" id="tab-ckbfs">0</span></button>
   </div>
 
   <div class="grid" id="grid">
-    <div class="empty">
-      <div class="icon">🔥</div>
-      <p>Connect your JoyID wallet to load DOBs</p>
-    </div>
+    <div class="empty"><div class="icon">🔥</div><p>Connect wallet and load cells</p></div>
   </div>
-
 </main>
 
 <footer>
-  <p>Open source · <a href="https://github.com/toastmanAu/spore-burner" target="_blank">github.com/toastmanAu/spore-burner</a> · Built on <a href="https://github.com/ckb-ecofund/ccc" target="_blank">CCC</a> + <a href="https://spore.pro" target="_blank">Spore Protocol</a></p>
+  <p>Open source · <a href="https://github.com/toastmanAu/spore-burner" target="_blank">github.com/toastmanAu/spore-burner</a> · Supports Spore Protocol &amp; CKBFS</p>
 </footer>
 
-<!-- Confirm modal -->
 <div class="overlay" id="overlay">
   <div class="modal">
     <h2>🔥 Confirm Burn</h2>
-    <p>These DOBs will be <strong>permanently destroyed</strong> and the locked CKB returned to your wallet. This cannot be undone.</p>
+    <p>These cells will be <strong>permanently destroyed</strong> and the locked CKB returned to your wallet. This cannot be undone.</p>
     <div class="modal-list" id="modal-list"></div>
     <div class="modal-total">Total CKB reclaimed: <strong id="modal-total">0 CKB</strong></div>
     <div class="modal-actions">
@@ -181,55 +164,71 @@
 
 <script type="module">
 import * as ccc from 'https://esm.sh/@ckb-ccc/core@1.12.5';
-import { meltSpore, findSporesBySigner } from 'https://esm.sh/@ckb-ccc/spore@1.5.17';
+import { meltSpore } from 'https://esm.sh/@ckb-ccc/spore@1.5.17';
 import { JoyId } from 'https://esm.sh/@ckb-ccc/joy-id@1.0.32';
 const CkbSigner = JoyId.CkbSigner;
 
-// ── State
+// ── Known type script code hashes ─────────────────────────────────────────────
+const SPORE_HASHES = {
+  testnet: [
+    { codeHash: '0x685a60219309029d01310311dba953d67029170ca4848a4ff638e57002130a0d', hashType: 'data1', label: 'Spore V2' },
+    { codeHash: '0xbbad126377d45f90a8ee120da988a2d7332c78ba8fd679aab478a19d6c133494', hashType: 'data1', label: 'Spore V1' },
+    { codeHash: '0x0b1f412fbae26853ff7d082d422c2bdd9e2ff94ee8aaec11240a5b34cc6e890f', hashType: 'type',  label: 'Spore DID' },
+  ],
+  mainnet: [
+    { codeHash: '0x4a4dce1df3dffff7f8b2cd7dff7303df3b6150c9ac9e528c8d8e8ec7a1585c26', hashType: 'data1', label: 'Spore V2' },
+    { codeHash: '0x3d5f4b1f0ab75d65e85642cfab4a8a70e3ca1a8e5e91c2f58b975e85c1f4ee30', hashType: 'data1', label: 'Spore V1' },
+  ],
+};
+const CKBFS_HASHES = {
+  testnet: [
+    { codeHash: '0x31e6376287d223b8c0410d562fb422f04d1d617b2947596a14c3d2efb7218d3a', hashType: 'data1', label: 'CKBFS V2' },
+    { codeHash: '0xb5d13ffe0547c78021c01fe24dce2e959a1ed8edbca3cb93dd2e9f57fb56d695', hashType: 'data1', label: 'CKBFS V3' },
+    { codeHash: '0xe8905ad29a02cf8befa9c258f4f941773839a618d75a64afc22059de9413f712', hashType: 'data1', label: 'CKBFS V1' },
+  ],
+  mainnet: [
+    { codeHash: '0x31e6376287d223b8c0410d562fb422f04d1d617b2947596a14c3d2efb7218d3a', hashType: 'data1', label: 'CKBFS V2' },
+    { codeHash: '0xb5d13ffe0547c78021c01fe24dce2e959a1ed8edbca3cb93dd2e9f57fb56d695', hashType: 'data1', label: 'CKBFS V3' },
+  ],
+};
+
+// ── State ──────────────────────────────────────────────────────────────────────
 let network = 'testnet';
 let signer = null;
-let dobs = [];
+let cells = [];
 let selected = new Set();
+let activeTab = 'all';
 
-// ── Network switch
+// ── Network switch ─────────────────────────────────────────────────────────────
 window.switchNetwork = function(net) {
-  network = net;
-  signer = null;
-  dobs = [];
-  selected.clear();
-  document.getElementById('network-badge').className = `badge badge-${net}`;
-  document.getElementById('network-badge').textContent = net.toUpperCase();
-  document.getElementById('testnet-warn').style.display = net === 'testnet' ? '' : 'none';
-  document.getElementById('mainnet-warn').style.display = net === 'mainnet' ? '' : 'none';
+  network = net; signer = null; cells = []; selected.clear();
+  document.getElementById('net-badge').className = `badge badge-${net}`;
+  document.getElementById('net-badge').textContent = net.toUpperCase();
+  document.getElementById('warn-testnet').style.display = net === 'testnet' ? '' : 'none';
+  document.getElementById('warn-mainnet').style.display = net === 'mainnet' ? '' : 'none';
   document.querySelectorAll('.net-btn').forEach(b => b.classList.toggle('active', b.classList.contains(net)));
   document.getElementById('wallet-chip').textContent = 'Not connected';
   document.getElementById('wallet-chip').className = 'wallet-chip';
   document.getElementById('btn-load').disabled = true;
   document.getElementById('btn-connect').textContent = 'Connect JoyID';
-  renderDobs([]);
-  setStatus('', '');
+  document.getElementById('type-tabs').style.display = 'none';
+  renderCells([]); setStatus('', '');
 };
 
-// ── Wallet connect
+// ── Wallet ─────────────────────────────────────────────────────────────────────
 window.connectWallet = async function() {
   const btn = document.getElementById('btn-connect');
   btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>Connecting...';
+  btn.innerHTML = '<span class="spinner"></span>Connecting…';
   try {
-    const client = network === 'mainnet'
-      ? new ccc.ClientPublicMainnet()
-      : new ccc.ClientPublicTestnet();
-
-    // CkbSigner from @ckb-ccc/joy-id — direct JoyID passkey connect, no connector popup
+    const client = network === 'mainnet' ? new ccc.ClientPublicMainnet() : new ccc.ClientPublicTestnet();
     const appUri = network === 'mainnet' ? 'https://app.joy.id' : 'https://testnet.joyid.dev';
-    const joyId = new CkbSigner(client, 'Spore Burner', 'https://toastmanau.github.io/spore-burner/favicon.png', appUri);
-    await joyId.connect();
-    signer = joyId;
-
-    const addrs = await signer.getAddresses();
-    const addr = addrs[0];
+    const joy = new CkbSigner(client, 'Spore Burner', '', appUri);
+    await joy.connect();
+    signer = joy;
+    const addr = await signer.getRecommendedAddress();
     document.getElementById('wallet-chip').textContent = addr.slice(0,14) + '…' + addr.slice(-6);
-    document.getElementById('wallet-chip').className = 'wallet-chip connected';
+    document.getElementById('wallet-chip').className = 'wallet-chip ok';
     document.getElementById('btn-load').disabled = false;
     btn.textContent = 'Reconnect';
     setStatus('Wallet connected ✓', 'success');
@@ -240,103 +239,157 @@ window.connectWallet = async function() {
   btn.disabled = false;
 };
 
-// ── Load DOBs
-window.loadDobs = async function() {
+// ── Load cells ─────────────────────────────────────────────────────────────────
+window.loadCells = async function() {
   if (!signer) return;
   const btn = document.getElementById('btn-load');
   btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>Loading...';
+  btn.innerHTML = '<span class="spinner"></span>Scanning…';
   selected.clear(); updateBulkBar();
-  setStatus('Scanning for Spore cells…', 'info');
+  setStatus('Scanning for Spore & CKBFS cells…', 'info');
 
   try {
-    const cells = [];
-    for await (const { cell, sporeData } of findSporesBySigner({ signer, limit: 100 })) {
-      cells.push({
-        id: cell.cellOutput.type.args,
-        capacity: BigInt(cell.cellOutput.capacity),
-        ckb: Number(BigInt(cell.cellOutput.capacity)) / 1e8,
-        contentType: sporeData.contentType || 'unknown',
-      });
+    const client = network === 'mainnet' ? new ccc.ClientPublicMainnet() : new ccc.ClientPublicTestnet();
+    const lockObjs = await signer.getAddressObjs();
+    const found = [];
+
+    async function scanHashes(hashList, cellType) {
+      for (const { script: lock } of lockObjs) {
+        for (const scriptInfo of hashList) {
+          try {
+            const key = {
+              script: lock,
+              scriptType: 'lock',
+              scriptSearchMode: 'exact',
+              filter: {
+                script: { codeHash: scriptInfo.codeHash, hashType: scriptInfo.hashType, args: '0x' },
+              },
+              withData: true,
+            };
+            for await (const cell of client.findCells(key, 'asc', 100)) {
+              if (cell.cellOutput.type?.codeHash === scriptInfo.codeHash) {
+                const uid = cell.outPoint.txHash + ':' + cell.outPoint.index;
+                found.push({
+                  id: uid,
+                  sporeId: cell.cellOutput.type.args,
+                  outPoint: cell.outPoint,
+                  capacity: BigInt(cell.cellOutput.capacity),
+                  ckb: Number(BigInt(cell.cellOutput.capacity)) / 1e8,
+                  cellType,
+                  label: scriptInfo.label,
+                  codeHash: scriptInfo.codeHash,
+                  contentType: tryParseContentType(cell.outputData),
+                  cell,
+                });
+              }
+            }
+          } catch(e) {
+            console.warn(`[scan] ${scriptInfo.label} error:`, e.message);
+          }
+        }
+      }
     }
 
-    dobs = cells;
-    renderDobs(dobs);
-    if (dobs.length === 0) setStatus('No Spore DOBs found in this wallet on ' + network, 'info');
-    else setStatus(`Found ${dobs.length} DOB${dobs.length !== 1 ? 's' : ''} — click to select, then burn`, 'success');
-  } catch(e) {
-    setStatus('Failed to load: ' + e.message, 'error');
-  }
+    await scanHashes(SPORE_HASHES[network], 'spore');
+    await scanHashes(CKBFS_HASHES[network], 'ckbfs');
 
+    cells = found;
+    const sc = cells.filter(c => c.cellType === 'spore').length;
+    const kc = cells.filter(c => c.cellType === 'ckbfs').length;
+    document.getElementById('tab-all').textContent   = cells.length;
+    document.getElementById('tab-spore').textContent = sc;
+    document.getElementById('tab-ckbfs').textContent = kc;
+    document.getElementById('type-tabs').style.display = cells.length > 0 ? 'flex' : 'none';
+    showTab('all');
+
+    if (cells.length === 0)
+      setStatus(`No Spore or CKBFS cells found in this wallet on ${network}`, 'info');
+    else
+      setStatus(`Found ${sc} Spore DOB${sc !== 1 ? 's' : ''} + ${kc} CKBFS cell${kc !== 1 ? 's' : ''} — click to select`, 'success');
+  } catch(e) {
+    setStatus('Failed: ' + e.message, 'error');
+    console.error(e);
+  }
   btn.textContent = 'Reload';
   btn.disabled = false;
 };
 
-// ── Render
-function renderDobs(list) {
+// ── Tabs ────────────────────────────────────────────────────────────────────────
+window.showTab = function(tab) {
+  activeTab = tab;
+  document.querySelectorAll('.type-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
+  renderCells(tab === 'all' ? cells : cells.filter(c => c.cellType === tab));
+};
+
+// ── Render ─────────────────────────────────────────────────────────────────────
+function renderCells(list) {
   const grid = document.getElementById('grid');
   if (list.length === 0) {
-    grid.innerHTML = dobs.length === 0
-      ? `<div class="empty"><div class="icon">🎉</div><p>No DOBs found in this wallet</p></div>`
-      : `<div class="empty"><div class="icon">🔥</div><p>Connect wallet and load DOBs</p></div>`;
+    grid.innerHTML = `<div class="empty"><div class="icon">🔥</div><p>${cells.length === 0 ? 'Connect wallet and load cells' : 'No cells in this category'}</p></div>`;
     return;
   }
   grid.innerHTML = list.map(d => {
-    const shortId = d.id.slice(0,10) + '…' + d.id.slice(-6);
     const sel = selected.has(d.id);
+    const icon = d.cellType === 'ckbfs' ? '📄' : '🧬';
+    const lbl  = d.cellType === 'ckbfs' ? 'lbl-ckbfs' : 'lbl-spore';
+    const shortId = d.sporeId ? (d.sporeId.slice(0,10) + '…' + d.sporeId.slice(-6)) : (d.id.slice(0,12) + '…');
     return `
-    <div class="dob-card ${sel ? 'selected' : ''}" id="card-${d.id}" onclick="toggle('${d.id}')">
+    <div class="dob-card ${sel ? 'sel' : ''}" id="card-${CSS.escape(d.id)}" onclick="toggle('${d.id.replace(/'/g,"\\'")}')">
       <div class="card-thumb">
-        🧬
+        ${icon}
         <div class="card-check">${sel ? '✓' : ''}</div>
+        <div class="card-label ${lbl}">${d.label}</div>
       </div>
       <div class="card-body">
-        <div class="card-id" title="${d.id}">${shortId}</div>
+        <div class="card-id" title="${d.sporeId || d.id}">${shortId}</div>
         <div class="card-ckb">${d.ckb.toFixed(2)} CKB</div>
-        <div class="card-type">${d.contentType || 'Spore DOB'}</div>
+        <div class="card-meta">${d.contentType}</div>
       </div>
     </div>`;
   }).join('');
 }
 
-// ── Select
+// ── Select ─────────────────────────────────────────────────────────────────────
 window.toggle = function(id) {
-  if (selected.has(id)) selected.delete(id);
-  else selected.add(id);
-  const card = document.getElementById('card-' + id);
-  if (card) {
-    card.classList.toggle('selected', selected.has(id));
-    card.querySelector('.card-check').textContent = selected.has(id) ? '✓' : '';
-  }
+  if (selected.has(id)) selected.delete(id); else selected.add(id);
+  const card = document.getElementById('card-' + CSS.escape(id));
+  if (card) { card.classList.toggle('sel', selected.has(id)); card.querySelector('.card-check').textContent = selected.has(id) ? '✓' : ''; }
   updateBulkBar();
 };
-
-window.selectAll = () => { dobs.forEach(d => selected.add(d.id)); renderDobs(dobs); updateBulkBar(); };
-window.selectNone = () => { selected.clear(); renderDobs(dobs); updateBulkBar(); };
-
+window.selectAll = () => {
+  const visible = activeTab === 'all' ? cells : cells.filter(c => c.cellType === activeTab);
+  visible.forEach(d => selected.add(d.id));
+  renderCells(visible); updateBulkBar();
+};
+window.selectNone = () => {
+  selected.clear();
+  renderCells(activeTab === 'all' ? cells : cells.filter(c => c.cellType === activeTab));
+  updateBulkBar();
+};
 function updateBulkBar() {
   const count = selected.size;
-  const ckb = [...selected].reduce((s, id) => s + (dobs.find(d => d.id === id)?.ckb || 0), 0);
+  const ckb = [...selected].reduce((s, id) => s + (cells.find(d => d.id === id)?.ckb || 0), 0);
   document.getElementById('sel-count').textContent = count;
-  document.getElementById('sel-ckb').textContent = `+${ckb.toFixed(2)} CKB to reclaim`;
-  document.getElementById('bulk-bar').classList.toggle('visible', count > 0);
+  document.getElementById('sel-ckb').textContent = `+${ckb.toFixed(2)} CKB`;
+  document.getElementById('bulk-bar').classList.toggle('on', count > 0);
 }
 
-// ── Confirm modal
+// ── Confirm ─────────────────────────────────────────────────────────────────────
 window.openConfirm = function() {
   if (!selected.size) return;
   const lines = [...selected].map(id => {
-    const d = dobs.find(x => x.id === id);
-    return `${id.slice(0,12)}…${id.slice(-6)}   ${d?.ckb.toFixed(2)} CKB`;
+    const d = cells.find(x => x.id === id);
+    const dispId = d?.sporeId ? d.sporeId.slice(0,12) + '…' + d.sporeId.slice(-6) : id.slice(0,20) + '…';
+    return `[${d?.label}] ${dispId}  ${d?.ckb.toFixed(2)} CKB`;
   }).join('\n');
   document.getElementById('modal-list').textContent = lines;
-  const total = [...selected].reduce((s,id) => s + (dobs.find(d=>d.id===id)?.ckb||0), 0);
+  const total = [...selected].reduce((s, id) => s + (cells.find(d => d.id === id)?.ckb || 0), 0);
   document.getElementById('modal-total').textContent = total.toFixed(2) + ' CKB';
   document.getElementById('overlay').classList.add('open');
 };
 window.closeConfirm = () => document.getElementById('overlay').classList.remove('open');
 
-// ── Execute burn
+// ── Execute burn ───────────────────────────────────────────────────────────────
 window.executeBurn = async function() {
   const btn = document.getElementById('btn-burn');
   btn.disabled = true;
@@ -347,28 +400,60 @@ window.executeBurn = async function() {
   let done = 0;
 
   for (const id of ids) {
-    setStatus(`Burning ${done + 1}/${ids.length}… waiting for JoyID signature`, 'info');
+    const d = cells.find(x => x.id === id);
+    setStatus(`Burning ${done + 1}/${ids.length}: [${d?.label}] — sign in JoyID`, 'info');
     try {
-      const tx = await meltSpore({ signer, id });
-      const txHash = await signer.sendTransaction(tx);
-      document.getElementById('card-' + id)?.remove();
-      dobs = dobs.filter(d => d.id !== id);
+      let txHash;
+      if (d.cellType === 'spore') {
+        // Spore uses meltSpore
+        const tx = await meltSpore({ signer, id: d.sporeId });
+        txHash = await signer.sendTransaction(tx);
+      } else {
+        // CKBFS — burn by consuming the cell with no type output (simple CKB transfer back to self)
+        const client = network === 'mainnet' ? new ccc.ClientPublicMainnet() : new ccc.ClientPublicTestnet();
+        const addr = await signer.getRecommendedAddress();
+        const tx = ccc.Transaction.from({ outputs: [{ lock: (await signer.getAddressObjs())[0].script }] });
+        tx.inputs.push(ccc.CellInput.from({ previousOutput: d.outPoint, since: '0x0' }));
+        await tx.completeInputsByCapacity(signer);
+        await tx.completeFeeBy(signer, 1000n);
+        txHash = await signer.sendTransaction(tx);
+      }
+      document.getElementById('card-' + CSS.escape(id))?.remove();
+      cells = cells.filter(x => x.id !== id);
       selected.delete(id);
-      updateBulkBar();
       done++;
-      setStatus(`✓ ${done}/${ids.length} burned → tx ${txHash.slice(0,14)}…`, 'success');
+      // Update tab counts
+      const sc = cells.filter(c => c.cellType === 'spore').length;
+      const kc = cells.filter(c => c.cellType === 'ckbfs').length;
+      document.getElementById('tab-all').textContent   = cells.length;
+      document.getElementById('tab-spore').textContent = sc;
+      document.getElementById('tab-ckbfs').textContent = kc;
+      updateBulkBar();
+      setStatus(`✓ ${done}/${ids.length} burned → ${txHash.slice(0,14)}…`, 'success');
     } catch(e) {
-      setStatus(`Failed on DOB ${id.slice(0,10)}…: ${e.message}`, 'error');
+      setStatus(`Failed on cell ${done + 1}: ${e.message}`, 'error');
+      console.error(e);
       break;
     }
   }
-
-  if (done === ids.length) setStatus(`🔥 Done! Burned ${done} DOB${done !== 1 ? 's' : ''}. CKB returned to your wallet.`, 'success');
+  if (done === ids.length) setStatus(`🔥 Done! Burned ${done} cell${done !== 1 ? 's' : ''}. CKB returned to wallet.`, 'success');
   btn.textContent = '🔥 Burn Forever';
   btn.disabled = false;
 };
 
-// ── Status
+// ── Helpers ─────────────────────────────────────────────────────────────────────
+function tryParseContentType(hexData) {
+  if (!hexData || hexData === '0x' || hexData.length < 4) return 'unknown';
+  try {
+    const hex = hexData.startsWith('0x') ? hexData.slice(2) : hexData;
+    const bytes = new Uint8Array(Math.min(hex.length / 2, 120));
+    for (let i = 0; i < bytes.length; i++) bytes[i] = parseInt(hex.slice(i*2, i*2+2), 16);
+    const text = new TextDecoder('utf-8', { fatal: false }).decode(bytes);
+    const m = text.match(/image\/[\w+\-.]+|text\/[\w+\-.]+|application\/[\w+\-.]+/);
+    return m ? m[0] : 'binary';
+  } catch { return 'binary'; }
+}
+
 function setStatus(msg, type) {
   const bar = document.getElementById('status-bar');
   bar.textContent = msg;
@@ -376,7 +461,7 @@ function setStatus(msg, type) {
   if (!type) bar.style.display = 'none';
 }
 
-// ── Init
+// Init
 switchNetwork('testnet');
 </script>
 
