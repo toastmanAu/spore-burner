@@ -407,16 +407,18 @@ window.executeBurn = async function() {
       let txHash;
       if (d.cellType === 'spore') {
         // Spore uses meltSpore
-        const tx = await meltSpore({ signer, id: d.sporeId });
+        const { tx } = await meltSpore({ signer, id: d.sporeId });
         txHash = await signer.sendTransaction(tx);
       } else {
-        // CKBFS — burn by consuming the cell with no type output (simple CKB transfer back to self)
-        const client = network === 'mainnet' ? new ccc.ClientPublicMainnet() : new ccc.ClientPublicTestnet();
-        const addr = await signer.getRecommendedAddress();
-        const tx = ccc.Transaction.from({ outputs: [{ lock: (await signer.getAddressObjs())[0].script }] });
-        tx.inputs.push(ccc.CellInput.from({ previousOutput: d.outPoint, since: '0x0' }));
+        // CKBFS — consume the cell, return capacity to self (no type output)
+        const lockObj = (await signer.getAddressObjs())[0];
+        let tx = ccc.Transaction.from({
+          inputs: [{ previousOutput: d.outPoint, since: '0x0' }],
+          outputs: [{ lock: lockObj.script }],
+        });
         await tx.completeInputsByCapacity(signer);
         await tx.completeFeeBy(signer, 1000n);
+        tx = await signer.prepareTransaction(tx); // fills JoyID witness placeholder
         txHash = await signer.sendTransaction(tx);
       }
       document.getElementById('card-' + CSS.escape(id))?.remove();
