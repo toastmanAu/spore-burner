@@ -124,6 +124,8 @@ document.addEventListener('submit', e => e.preventDefault());
 
   <div id="status-bar"></div>
 
+  <div id="debug-log" style="font-size:.72rem;font-family:monospace;background:#0a0c0f;border:1px solid #222;border-radius:6px;padding:.5rem .75rem;margin-bottom:.75rem;max-height:120px;overflow-y:auto;display:none;color:#aaa;white-space:pre-wrap;word-break:break-all;"></div>
+
   <div class="controls">
     <button class="btn btn-primary" id="btn-connect" onclick="connectWallet()">Connect JoyID</button>
     <button class="btn btn-outline" id="btn-load" onclick="loadCells()" disabled>Load My Cells</button>
@@ -536,6 +538,13 @@ function setStatus(msg, type) {
   bar.textContent = msg;
   bar.className = type || '';
   if (!type) bar.style.display = 'none';
+  if (msg) addLog((type === 'error' ? '❌ ' : type === 'success' ? '✅ ' : 'ℹ️  ') + msg);
+}
+function addLog(msg) {
+  const log = document.getElementById('debug-log');
+  log.style.display = 'block';
+  log.textContent += new Date().toLocaleTimeString() + ' ' + msg + '\n';
+  log.scrollTop = log.scrollHeight;
 }
 
 // Init
