@@ -455,6 +455,7 @@ window.executeBurn = async function() {
       let txHash;
       if (d.cellType === 'spore') {
         // Spore uses meltSpore
+        console.log('[burn] meltSpore id:', d.sporeId, 'signer client:', signer?.client?.constructor?.name);
         const { tx } = await meltSpore({ signer, id: d.sporeId });
         txHash = await signer.sendTransaction(tx);
       } else {
